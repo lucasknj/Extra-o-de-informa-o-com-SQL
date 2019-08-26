@@ -1,0 +1,372 @@
+/*Query 1 - query usada para o primeiro insight*/
+
+WITH t1
+AS (SELECT
+  ar.Name AS artista,
+  SUM(il.quantity) AS musicas_vendidas,
+  il.UnitPrice AS preco_musica
+FROM Artist ar
+JOIN Album al
+  ON ar.ArtistId = al.ArtistId
+JOIN Track t
+  ON t.AlbumId = al.AlbumId
+JOIN InvoiceLine il
+  ON t.TrackId = il.TrackId
+JOIN Invoice i
+  ON il.InvoiceId = i.InvoiceId
+GROUP BY 1
+ORDER BY 2 DESC),
+
+t2
+AS (SELECT
+  artista,
+  (musicas_vendidas * preco_musica) AS amountSpent,
+  g.Name AS genero
+FROM t1
+JOIN Artist ar
+  ON artista = ar.Name
+JOIN Album al
+  ON ar.ArtistId = al.ArtistId
+JOIN Track t
+  ON al.AlbumId = t.AlbumId
+JOIN Genre g
+  ON t.GenreId = g.GenreId
+GROUP BY 1
+ORDER BY 2 DESC)
+
+SELECT
+  genero Genero,
+  COUNT(*) AS Quantidade
+FROM t2
+WHERE amountSpent > (SELECT
+  AVG(amountSpent)
+FROM t2)
+GROUP BY 1
+ORDER BY 2 DESC;
+
+/*Query 2 - query usada para o segundo insight*/
+
+WITH t1
+AS (SELECT
+  g.Name AS genero_principal,
+  COUNT(il.quantity) AS quantidade
+FROM Genre g
+JOIN Track t
+  ON g.GenreId = t.GenreId
+JOIN InvoiceLine il
+  ON t.TrackId = il.TrackId
+JOIN Invoice i
+  ON il.InvoiceId = i.InvoiceId
+JOIN Customer c
+  ON c.CustomerID = i.CustomerId
+GROUP BY 1
+ORDER BY 2 DESC),
+
+t2
+AS (SELECT
+  strftime('%Y', i.InvoiceDate) AS year199r,
+  COUNT(il.quantity) AS umpontonovenover
+FROM Invoice i
+JOIN InvoiceLine il
+  ON i.InvoiceId = il.InvoiceId
+JOIN Track t
+  ON t.TrackId = il.TrackId
+JOIN Genre g
+  ON t.GenreId = g.GenreId
+JOIN Album al
+  ON al.AlbumId = t.AlbumId
+JOIN Artist ar
+  ON ar.ArtistId = al.ArtistId
+WHERE il.UnitPrice = 1.99
+AND g.Name = (SELECT
+  genero_principal
+FROM t1)
+GROUP BY 1),
+
+t3
+AS (SELECT
+  strftime('%Y', i.InvoiceDate) AS year099r,
+  COUNT(il.quantity) AS zeropontonovenover
+FROM Invoice i
+JOIN InvoiceLine il
+  ON i.InvoiceId = il.InvoiceId
+JOIN Track t
+  ON t.TrackId = il.TrackId
+JOIN Genre g
+  ON t.GenreId = g.GenreId
+JOIN Album al
+  ON al.AlbumId = t.AlbumId
+JOIN Artist ar
+  ON ar.ArtistId = al.ArtistId
+WHERE il.UnitPrice = 0.99
+AND g.Name = (SELECT
+  genero_principal
+FROM t1)
+GROUP BY 1),
+
+
+t4
+AS (SELECT
+  strftime('%Y', i.InvoiceDate) AS year199t,
+  COUNT(il.quantity) AS umpontonovenovet
+FROM Invoice i
+JOIN InvoiceLine il
+  ON i.InvoiceId = il.InvoiceId
+JOIN Track t
+  ON t.TrackId = il.TrackId
+JOIN Genre g
+  ON t.GenreId = g.GenreId
+JOIN Album al
+  ON al.AlbumId = t.AlbumId
+JOIN Artist ar
+  ON ar.ArtistId = al.ArtistId
+WHERE il.UnitPrice = 1.99
+GROUP BY 1),
+
+t5
+AS (SELECT
+  strftime('%Y', i.InvoiceDate) AS year099t,
+  COUNT(il.quantity) AS zeropontonovenovet
+FROM Invoice i
+JOIN InvoiceLine il
+  ON i.InvoiceId = il.InvoiceId
+JOIN Track t
+  ON t.TrackId = il.TrackId
+JOIN Genre g
+  ON t.GenreId = g.GenreId
+JOIN Album al
+  ON al.AlbumId = t.AlbumId
+JOIN Artist ar
+  ON ar.ArtistId = al.ArtistId
+WHERE il.UnitPrice = 0.99
+GROUP BY 1),
+
+t6
+AS (SELECT
+  year099r AS year,
+  zeropontonovenover AS zpnn,
+  CASE
+    WHEN umpontonovenover IS NULL THEN 0
+    ELSE umpontonovenover
+  END AS upnn
+FROM t3
+LEFT JOIN t2
+  ON year099r = year199r),
+
+t7
+AS (SELECT
+  year099t AS yeart,
+  zeropontonovenovet AS zpnnt,
+  CASE
+    WHEN umpontonovenovet IS NULL THEN 0
+    ELSE umpontonovenovet
+  END AS upnnt
+FROM t5
+LEFT JOIN t4
+  ON year099t = year199t)
+
+SELECT
+  year AS Ano,
+  (zpnn * 0.99 + upnn * 1.99) AS Rock,
+  (zpnnt * 0.99 + upnnt * 1.99) AS Total
+FROM t6
+JOIN t7
+  ON year = yeart
+
+/*Query 3 - query usada para o terceiro insight*/
+
+WITH t1
+AS (SELECT
+  g.Name AS genero_principal,
+  COUNT(il.quantity) AS quantidade
+FROM Genre g
+JOIN Track t
+  ON g.GenreId = t.GenreId
+JOIN InvoiceLine il
+  ON t.TrackId = il.TrackId
+JOIN Invoice i
+  ON il.InvoiceId = i.InvoiceId
+JOIN Customer c
+  ON c.CustomerID = i.CustomerId
+GROUP BY 1
+ORDER BY 2 DESC),
+t2
+AS (SELECT
+  strftime('%m', i.InvoiceDate) AS m199r,
+  COUNT(il.quantity) AS umpontonovenover
+FROM Invoice i
+JOIN InvoiceLine il
+  ON i.InvoiceId = il.InvoiceId
+JOIN Track t
+  ON t.TrackId = il.TrackId
+JOIN Genre g
+  ON t.GenreId = g.GenreId
+JOIN Album al
+  ON al.AlbumId = t.AlbumId
+JOIN Artist ar
+  ON ar.ArtistId = al.ArtistId
+WHERE il.UnitPrice = 1.99
+AND g.Name = (SELECT
+  genero_principal
+FROM t1)
+GROUP BY 1),
+
+t3
+AS (SELECT
+  strftime('%m', i.InvoiceDate) AS m099r,
+  COUNT(il.quantity) AS zeropontonovenover
+FROM Invoice i
+JOIN InvoiceLine il
+  ON i.InvoiceId = il.InvoiceId
+JOIN Track t
+  ON t.TrackId = il.TrackId
+JOIN Genre g
+  ON t.GenreId = g.GenreId
+JOIN Album al
+  ON al.AlbumId = t.AlbumId
+JOIN Artist ar
+  ON ar.ArtistId = al.ArtistId
+WHERE il.UnitPrice = 0.99
+AND g.Name = (SELECT
+  genero_principal
+FROM t1)
+GROUP BY 1),
+
+
+t4
+AS (SELECT
+  strftime('%m', i.InvoiceDate) AS m199t,
+  COUNT(il.quantity) AS umpontonovenovet
+FROM Invoice i
+JOIN InvoiceLine il
+  ON i.InvoiceId = il.InvoiceId
+JOIN Track t
+  ON t.TrackId = il.TrackId
+JOIN Genre g
+  ON t.GenreId = g.GenreId
+JOIN Album al
+  ON al.AlbumId = t.AlbumId
+JOIN Artist ar
+  ON ar.ArtistId = al.ArtistId
+WHERE il.UnitPrice = 1.99
+GROUP BY 1),
+
+t5
+AS (SELECT
+  strftime('%m', i.InvoiceDate) AS m099t,
+  COUNT(il.quantity) AS zeropontonovenovet
+FROM Invoice i
+JOIN InvoiceLine il
+  ON i.InvoiceId = il.InvoiceId
+JOIN Track t
+  ON t.TrackId = il.TrackId
+JOIN Genre g
+  ON t.GenreId = g.GenreId
+JOIN Album al
+  ON al.AlbumId = t.AlbumId
+JOIN Artist ar
+  ON ar.ArtistId = al.ArtistId
+WHERE il.UnitPrice = 0.99
+GROUP BY 1),
+
+t6
+AS (SELECT
+  m099r AS m,
+  zeropontonovenover AS zpnn,
+  CASE
+    WHEN umpontonovenover IS NULL THEN 0
+    ELSE umpontonovenover
+  END AS upnn
+FROM t3
+LEFT JOIN t2
+  ON m099r = m199r),
+
+t7
+AS (SELECT
+  m099t AS mt,
+  zeropontonovenovet AS zpnnt,
+  CASE
+    WHEN umpontonovenovet IS NULL THEN 0
+    ELSE umpontonovenovet
+  END AS upnnt
+FROM t5
+LEFT JOIN t4
+  ON m099t = m199t)
+
+SELECT
+  m AS Month,
+  (zpnn * 0.99 + upnn * 1.99) AS Rock,
+  (zpnnt * 0.99 + upnnt * 1.99) AS total
+FROM t6
+JOIN t7
+  ON m = mt
+
+/*Query 4 - query usada para o quarto insight*/
+
+WITH t1
+AS (SELECT
+  g.Name AS t1estilo_musical,
+  c.Country AS t1paises,
+  COUNT(il.quantity) AS t1quantidade
+FROM Genre g
+JOIN Track t
+  ON g.GenreId = t.GenreId
+JOIN InvoiceLine il
+  ON t.TrackId = il.TrackId
+JOIN Invoice i
+  ON il.InvoiceId = i.InvoiceId
+JOIN Customer c
+  ON c.CustomerID = i.CustomerId
+GROUP BY 1,
+         2
+ORDER BY 2, 3 DESC),
+
+t2
+AS (SELECT
+  t1paises AS t2paises,
+  t1estilo_musical AS t2estilo_musical,
+  MAX(t1quantidade) AS t2quantidade
+FROM t1
+JOIN Genre g
+  ON g.Name = t1estilo_musical
+JOIN Track t
+  ON g.GenreId = t.GenreId
+JOIN InvoiceLine il
+  ON t.TrackId = il.TrackId
+JOIN Invoice i
+  ON il.InvoiceId = i.InvoiceId
+JOIN Customer c
+  ON c.CustomerID = i.CustomerId
+GROUP BY 1
+ORDER BY 1),
+
+t3
+AS (SELECT
+  t1paises AS paises,
+  t1quantidade AS total,
+  t1estilo_musical AS genero,
+  CASE
+    WHEN t1paises = t2paises AND
+      t1quantidade = t2quantidade THEN 1
+    ELSE 0
+  END AS rank
+FROM t1
+JOIN t2
+  ON t1paises = t2paises
+ORDER BY 2 DESC),
+
+t4
+AS (SELECT
+  paises,
+  genero,
+  total
+FROM t3
+WHERE rank = 1
+ORDER BY 1)
+
+SELECT
+  genero Genero,
+  COUNT(total) Quantidade
+FROM t4
+GROUP BY 1
+ORDER BY 2 DESC;
